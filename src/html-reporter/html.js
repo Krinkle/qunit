@@ -156,17 +156,14 @@ export function escapeText( s ) {
 			escapedTooltip = escapeText( val.tooltip );
 
 			if ( !val.value || typeof val.value === "string" ) {
-				urlConfigHtml += "<label for='qunit-urlconfig-" + escaped +
-				"' title='" + escapedTooltip + "'><input id='qunit-urlconfig-" + escaped +
-				"' name='" + escaped + "' type='checkbox'" +
+				urlConfigHtml += "<label title='" + escapedTooltip + "'><input name='" +
+				escaped + "' type='checkbox'" +
 				( val.value ? " value='" + escapeText( val.value ) + "'" : "" ) +
 				( config[ val.id ] ? " checked='checked'" : "" ) +
 				" title='" + escapedTooltip + "' />" + escapeText( val.label ) + "</label>";
 			} else {
-				urlConfigHtml += "<label for='qunit-urlconfig-" + escaped +
-				"' title='" + escapedTooltip + "'>" + val.label +
-				": </label><select id='qunit-urlconfig-" + escaped +
-				"' name='" + escaped + "' title='" + escapedTooltip + "'><option></option>";
+				urlConfigHtml += "<label title='" + escapedTooltip + "'>" + val.label +
+				": <select title='" + escapedTooltip + "'><option></option>";
 
 				if ( QUnit.is( "array", val.value ) ) {
 					for ( j = 0; j < val.value.length; j++ ) {
@@ -191,7 +188,7 @@ export function escapeText( s ) {
 					urlConfigHtml += "<option value='" + escaped +
 					"' selected='selected' disabled='disabled'>" + escaped + "</option>";
 				}
-				urlConfigHtml += "</select>";
+				urlConfigHtml += "</select></label>";
 			}
 		}
 
@@ -282,12 +279,13 @@ export function escapeText( s ) {
 	function applyUrlParams() {
 		var i,
 			selectedModules = [],
-			modulesList = id( "qunit-modulefilter-dropdown-list" ).getElementsByTagName( "input" ),
+			moduleOptions = id( "qunit-modulefilter-dropdown-list" )
+				.getElementsByTagName( "option" ),
 			filter = id( "qunit-filter-input" ).value;
 
-		for ( i = 0; i < modulesList.length; i++ ) {
-			if ( modulesList[ i ].checked ) {
-				selectedModules.push( modulesList[ i ].value );
+		for ( i = 0; i < moduleOptions.length; i++ ) {
+			if ( moduleOptions[ i ].selected ) {
+				selectedModules.push( moduleOptions[ i ].value );
 			}
 		}
 
@@ -348,38 +346,39 @@ export function escapeText( s ) {
 		return filter;
 	}
 
-	function moduleListHtml( modules ) {
-		var i, checked,
+	function renderModuleSelect( moduleSelect, modules ) {
+		var i, selected,
 			html = "";
+
+		moduleSelect.size = Math.min( 20, Math.max( 1, modules.length ) );
 
 		for ( i = 0; i < modules.length; i++ ) {
 			if ( modules[ i ].name !== "" ) {
-				checked = config.moduleId.indexOf( modules[ i ].moduleId ) > -1;
-				html += "<li><label class='clickable" + ( checked ? " checked" : "" ) +
-				"'><input type='checkbox' " + "value='" + modules[ i ].moduleId + "'" +
-				( checked ? " checked='checked'" : "" ) + " />" +
-				escapeText( modules[ i ].name ) + "</label></li>";
+				selected = config.moduleId.indexOf( modules[ i ].moduleId ) > -1;
+				html += "<option" + ( selected ? " selected" : "" ) +
+				" value='" + modules[ i ].moduleId + "'>" +
+				escapeText( modules[ i ].name ) + "</option>";
 			}
 		}
 
-		return html;
+		moduleSelect.innerHTML = html;
 	}
 
 	function toolbarModuleFilter() {
-		var commit, reset,
-			moduleFilter = document.createElement( "form" ),
+		var moduleFilter = document.createElement( "form" ),
 			label = document.createElement( "label" ),
+			moduleSearchContainer = document.createElement( "span" ),
 			moduleSearch = document.createElement( "input" ),
 			dropDown = document.createElement( "div" ),
-			actions = document.createElement( "span" ),
+			actions = document.createElement( "div" ),
 			applyButton = document.createElement( "button" ),
 			resetButton = document.createElement( "button" ),
 			allModulesLabel = document.createElement( "label" ),
 			allCheckbox = document.createElement( "input" ),
-			dropDownList = document.createElement( "ul" ),
-			dirty = false;
+			moduleSelect = document.createElement( "select" );
 
 		moduleSearch.id = "qunit-modulefilter-search";
+		moduleSearch.className = "qunit-modulefilter-search";
 		moduleSearch.autocomplete = "off";
 		addEvent( moduleSearch, "input", searchInput );
 		addEvent( moduleSearch, "input", searchFocus );
@@ -390,7 +389,9 @@ export function escapeText( s ) {
 
 		label.id = "qunit-modulefilter-search-container";
 		label.innerHTML = "Module: ";
-		label.appendChild( moduleSearch );
+		moduleSearchContainer.className = "qunit-modulefilter-search-container";
+		moduleSearchContainer.appendChild( moduleSearch );
+		label.appendChild( moduleSearchContainer );
 
 		applyButton.textContent = "Apply";
 		applyButton.style.display = "none";
@@ -401,29 +402,27 @@ export function escapeText( s ) {
 
 		allCheckbox.type = "checkbox";
 		allCheckbox.checked = config.moduleId.length === 0;
-
-		allModulesLabel.className = "clickable";
-		if ( config.moduleId.length ) {
-			allModulesLabel.className = "checked";
-		}
 		allModulesLabel.appendChild( allCheckbox );
 		allModulesLabel.appendChild( document.createTextNode( "All modules" ) );
 
 		actions.id = "qunit-modulefilter-actions";
-		actions.appendChild( applyButton );
-		actions.appendChild( resetButton );
+		actions.className = "qunit-modulefilter-actions";
 		actions.appendChild( allModulesLabel );
-		commit = actions.firstChild;
-		reset = commit.nextSibling;
-		addEvent( commit, "click", applyUrlParams );
+		actions.appendChild( resetButton );
+		actions.appendChild( applyButton );
+		addEvent( applyButton, "click", applyUrlParams );
 
-		dropDownList.id = "qunit-modulefilter-dropdown-list";
-		dropDownList.innerHTML = moduleListHtml( config.modules );
+		moduleSelect.id = "qunit-modulefilter-dropdown-list";
+		moduleSelect.className = "qunit-modulefilter-dropdown-list";
+		moduleSelect.multiple = true;
+		renderModuleSelect( moduleSelect, config.modules );
 
 		dropDown.id = "qunit-modulefilter-dropdown";
+		dropDown.className = "qunit-modulefilter-dropdown";
 		dropDown.style.display = "none";
 		dropDown.appendChild( actions );
-		dropDown.appendChild( dropDownList );
+		dropDown.appendChild( moduleSelect );
+		addEvent( dropDown, "input", selectionChange );
 		addEvent( dropDown, "change", selectionChange );
 		selectionChange();
 
@@ -447,10 +446,10 @@ export function escapeText( s ) {
 			addEvent( document, "click", hideHandler );
 			addEvent( document, "keydown", hideHandler );
 
-			// Hide on Escape keydown or outside-container click
 			function hideHandler( e ) {
 				var inContainer = moduleFilter.contains( e.target );
 
+				// Hide on Escape keydown or outside-container click
 				if ( e.keyCode === 27 || !inContainer ) {
 					if ( e.keyCode === 27 && inContainer ) {
 						moduleSearch.focus();
@@ -480,39 +479,32 @@ export function escapeText( s ) {
 			searchInputTimeout = window.setTimeout( () => {
 				var searchText = moduleSearch.value.toLowerCase(),
 					filteredModules = filterModules( searchText );
-				dropDownList.innerHTML = moduleListHtml( filteredModules );
+				renderModuleSelect( moduleSelect, filteredModules );
 			}, 200 );
 		}
 
 		// Processes selection changes
 		function selectionChange( evt ) {
-			var i, item,
-				checkbox = evt && evt.target || allCheckbox,
-				modulesList = dropDownList.getElementsByTagName( "input" ),
-				selectedNames = [];
+			var i, option,
+				target = evt && evt.target,
+				moduleOptions = moduleSelect.getElementsByTagName( "option" ),
+				selectedNames = [],
+				selectAll = ( !target || target === allCheckbox ) && allCheckbox.checked,
+				madeChanges = !!target;
 
-			toggleClass( checkbox.parentNode, "checked", checkbox.checked );
-
-			dirty = false;
-			if ( checkbox.checked && checkbox !== allCheckbox ) {
+			if ( madeChanges && target !== allCheckbox ) {
 				allCheckbox.checked = false;
-				removeClass( allCheckbox.parentNode, "checked" );
 			}
-			for ( i = 0; i < modulesList.length; i++ ) {
-				item = modulesList[ i ];
-				if ( !evt ) {
-					toggleClass( item.parentNode, "checked", item.checked );
-				} else if ( checkbox === allCheckbox && checkbox.checked ) {
-					item.checked = false;
-					removeClass( item.parentNode, "checked" );
-				}
-				dirty = dirty || ( item.checked !== item.defaultChecked );
-				if ( item.checked ) {
-					selectedNames.push( item.parentNode.textContent );
+			for ( i = 0; i < moduleOptions.length; i++ ) {
+				option = moduleOptions[ i ];
+				if ( selectAll ) {
+					option.selected = false;
+				} else if ( option.selected ) {
+					selectedNames.push( option.textContent );
 				}
 			}
 
-			commit.style.display = reset.style.display = dirty ? "" : "none";
+			applyButton.style.display = resetButton.style.display = madeChanges ? "" : "none";
 			moduleSearch.placeholder = selectedNames.join( ", " ) ||
 				allCheckbox.parentNode.textContent;
 			moduleSearch.title = "Type to filter list. Current selection:\n" +
@@ -526,6 +518,7 @@ export function escapeText( s ) {
 		var toolbarFilters = document.createElement( "span" );
 
 		toolbarFilters.id = "qunit-toolbar-filters";
+		toolbarFilters.className = "qunit-toolbar-filters";
 		toolbarFilters.appendChild( toolbarLooseFilter() );
 		toolbarFilters.appendChild( toolbarModuleFilter() );
 
@@ -533,12 +526,26 @@ export function escapeText( s ) {
 	}
 
 	function appendToolbar() {
-		var toolbar = id( "qunit-testrunner-toolbar" );
+		var controls,
+			toolbar = id( "qunit-testrunner-toolbar" );
 
 		if ( toolbar ) {
+			toolbar.className = "qunit-toolbar";
+
 			toolbar.appendChild( toolbarUrlConfigContainer() );
 			toolbar.appendChild( toolbarFilters() );
-			toolbar.appendChild( document.createElement( "div" ) ).className = "clearfix";
+
+			// Deprecated class "clearfix", to be removed in QUnit 3.
+			toolbar.appendChild( document.createElement( "div" ) )
+				.className = "clearfix qunit-clearfix";
+
+			controls = document.createElement( "p" );
+			controls.id = "qunit-testresult-controls";
+			controls.className = "qunit-toolbar-controls";
+			controls.appendChild( abortTestsButton() );
+			toolbar.appendChild( controls );
+
+			appendFilteredTest( toolbar );
 		}
 	}
 
@@ -562,39 +569,40 @@ export function escapeText( s ) {
 	function appendTestResults() {
 		var tests = id( "qunit-tests" ),
 			result = id( "qunit-testresult" ),
-			controls;
-
-		if ( result ) {
-			result.parentNode.removeChild( result );
-		}
+			toolbar = id( "qunit-testrunner-toolbar" );
 
 		if ( tests ) {
 			tests.innerHTML = "";
-			result = document.createElement( "p" );
-			result.id = "qunit-testresult";
-			result.className = "result";
-			tests.parentNode.insertBefore( result, tests );
-			result.innerHTML = "<div id=\"qunit-testresult-display\">Running...<br />&#160;</div>" +
-			"<div id=\"qunit-testresult-controls\"></div>" +
-			"<div class=\"clearfix\"></div>";
-			controls = id( "qunit-testresult-controls" );
+			tests.className = "qunit-tests";
 		}
 
-		if ( controls ) {
-			controls.appendChild( abortTestsButton() );
+		if ( toolbar && !result ) {
+			result = document.createElement( "div" );
+			result.id = "qunit-testresult";
+			toolbar.appendChild( result );
+		}
+
+		if ( result ) {
+			result.className = "qunit-toolbar-result";
+			result.innerHTML = "<p id='qunit-testresult-display'>Running...</p>";
 		}
 	}
 
-	function appendFilteredTest() {
-		var testId = QUnit.config.testId;
+	function appendFilteredTest( toolbar ) {
+		var testId = QUnit.config.testId,
+			filteredTest;
 		if ( !testId || testId.length <= 0 ) {
-			return "";
+			return;
 		}
-		return "<div id='qunit-filteredTest'>Rerunning selected tests: " +
+		filteredTest = document.createElement( "div" );
+		filteredTest.id = "qunit-filteredTest";
+		filteredTest.className = "qunit-toolbar-filtered";
+		filteredTest.innerHTML = "Rerunning selected tests: " +
 			escapeText( testId.join( ", " ) ) +
 			" <a id='qunit-clearFilter' href='" +
 			escapeText( unfilteredUrl ) +
-			"'>Run all tests</a></div>";
+			"'>Run all tests</a>";
+		toolbar.appendChild( filteredTest );
 	}
 
 	function appendUserAgent() {
@@ -629,18 +637,17 @@ export function escapeText( s ) {
 			// contains id="qunit".
 			qunit.innerHTML =
 			"<h1 id='qunit-header'>" + escapeText( document.title ) + "</h1>" +
-			"<h2 id='qunit-banner'></h2>" +
+			"<div id='qunit-banner'></div>" +
+			"<div id='qunit-userAgent'></div>" +
 			"<div id='qunit-testrunner-toolbar' role='navigation'></div>" +
-			appendFilteredTest() +
-			"<h2 id='qunit-userAgent'></h2>" +
 			"<ol id='qunit-tests'></ol>";
 		}
 
 		appendHeader();
-		appendBanner();
-		appendTestResults();
 		appendUserAgent();
 		appendToolbar();
+		appendBanner();
+		appendTestResults();
 	}
 
 	function appendTest( name, testId, moduleName ) {
@@ -652,6 +659,7 @@ export function escapeText( s ) {
 		}
 
 		title = document.createElement( "strong" );
+		title.className = "qunit-test-title";
 		title.innerHTML = getNameHtml( name, moduleName );
 
 		rerunTrigger = document.createElement( "a" );
@@ -680,7 +688,9 @@ export function escapeText( s ) {
 
 	QUnit.done( function( details ) {
 		var banner = id( "qunit-banner" ),
+			toolbar = id( "qunit-testrunner-toolbar" ),
 			tests = id( "qunit-tests" ),
+			controls = id( "qunit-testresult-controls" ),
 			abortButton = id( "qunit-abort-tests-button" ),
 			totalTests = stats.passedTests +
 				stats.skippedTests +
@@ -726,12 +736,17 @@ export function escapeText( s ) {
 			}
 		}
 
-		if ( banner && ( !abortButton || abortButton.disabled === false ) ) {
-			banner.className = stats.failedTests ? "qunit-fail" : "qunit-pass";
+		if ( !abortButton || abortButton.disabled === false ) {
+			if ( banner ) {
+				banner.className += stats.failedTests ? " qunit-fail" : " qunit-pass";
+			}
+			if ( toolbar ) {
+				toolbar.className += stats.failedTests ? " qunit-fail" : " qunit-pass";
+			}
 		}
 
-		if ( abortButton ) {
-			abortButton.parentNode.removeChild( abortButton );
+		if ( controls ) {
+			controls.parentNode.removeChild( controls );
 		}
 
 		if ( tests ) {
@@ -791,21 +806,21 @@ export function escapeText( s ) {
 	}
 
 	QUnit.testStart( function( details ) {
-		var running, bad;
+		var display, bad;
 
 		appendTest( details.name, details.testId, details.module );
 
-		running = id( "qunit-testresult-display" );
+		display = id( "qunit-testresult-display" );
 
-		if ( running ) {
-			addClass( running, "running" );
+		if ( display ) {
+			addClass( display, "running" );
 
 			bad = QUnit.config.reorder && details.previousFailure;
 
-			running.innerHTML = [
+			display.innerHTML = [
 				bad ?
 					"Rerunning previously failed test: <br />" :
-					"Running: <br />",
+					"Running: ",
 				getNameHtml( details.name, details.module ),
 				getProgressHtml( now() - config.started, stats, Test.count )
 			].join( "" );
@@ -961,11 +976,12 @@ export function escapeText( s ) {
 		testTitle = testItem.firstChild;
 
 		testCounts = bad ?
-			"<b class='failed'>" + bad + "</b>, " + "<b class='passed'>" + good + "</b>, " :
+			"<span class='failed'>" + bad + "</span>, " +
+				"<span class='passed'>" + good + "</span>, " :
 			"";
 
-		testTitle.innerHTML += " <b class='counts'>(" + testCounts +
-		details.assertions.length + ")</b>";
+		testTitle.innerHTML += " <span class='counts'>(" + testCounts +
+			details.assertions.length + ")</span>";
 
 		if ( details.skipped ) {
 			stats.skippedTests++;
@@ -975,6 +991,8 @@ export function escapeText( s ) {
 			skipped.className = "qunit-skipped-label";
 			skipped.innerHTML = "skipped";
 			testItem.insertBefore( skipped, testTitle );
+			const skippedSpace = document.createTextNode( " " );
+			testItem.insertBefore( skippedSpace, testTitle );
 		} else {
 			addEvent( testTitle, "click", function() {
 				toggleClass( assertList, "qunit-collapsed" );

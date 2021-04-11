@@ -14,7 +14,7 @@ QUnit.module( "HTML Reporter", function() {
 			// is created before any test is ran. So use ids instead.
 			if ( document.getElementById( "qunit-unescaped-module" ) ) {
 
-				// This can either be from in #qunit-modulefilter or #qunit-testresult
+				// This can either be from in #qunit-modulefilter or #qunit-testresult-display
 				assert.true( false, "Unescaped module name" );
 			}
 			if ( document.getElementById( "qunit-unescaped-test" ) ) {
@@ -37,14 +37,14 @@ QUnit.module( "HTML Reporter", function() {
 	} );
 
 	QUnit.test( "running text", function( assert ) {
-		var display = document.getElementById( "qunit-testresult" );
+		var display = document.getElementById( "qunit-testresult-display" );
 
 		assert.true( /running text/.test( display.innerHTML ), "test name" );
 		assert.true( /Display/.test( display.innerHTML ), "module name" );
 	} );
 
 	QUnit.test( "run progress", function( assert ) {
-		var display = document.getElementById( "qunit-testresult" );
+		var display = document.getElementById( "qunit-testresult-display" );
 
 		var expected = /\d+ \/ \d+ tests completed in \d+ milliseconds, with \d+ failed, \d+ skipped, and \d+ todo./;
 		assert.true(

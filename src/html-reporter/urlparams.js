@@ -41,7 +41,7 @@ import { window } from "../globals";
 		},
 		{
 			id: "noglobals",
-			label: "Check for Globals",
+			label: "Check for globals",
 			tooltip: "Enabling this will test if any test introduces new properties on the " +
 			"global object (`window` in Browsers). Stored as query-strings."
 		},
