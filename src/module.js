@@ -24,9 +24,17 @@ function createModule( name, testEnvironment, modifiers ) {
 	const skip = parentModule !== null && parentModule.skip || modifiers.skip;
 	const todo = parentModule !== null && parentModule.todo || modifiers.todo;
 
+	const env = {};
+	if ( parentModule ) {
+		extend( env, parentModule.testEnvironment );
+	}
+	extend( env, testEnvironment );
+
 	const module = {
 		name: moduleName,
 		parentModule: parentModule,
+		hooks: {},
+		testEnvironment: env,
 		tests: [],
 		moduleId: generateHash( moduleName ),
 		testsRun: 0,
@@ -43,16 +51,31 @@ function createModule( name, testEnvironment, modifiers ) {
 		ignored: modifiers.ignored || false
 	};
 
-	const env = {};
 	if ( parentModule ) {
 		parentModule.childModules.push( module );
-		extend( env, parentModule.testEnvironment );
 	}
-	extend( env, testEnvironment );
-	module.testEnvironment = env;
 
 	config.modules.push( module );
 	return module;
+}
+
+function setHookFromEnvironment( hooks, environment, name ) {
+	const potentialHook = environment[ name ];
+	hooks[ name ] = typeof potentialHook === "function" ? [ potentialHook ] : [];
+	delete environment[ name ];
+}
+
+function makeSetHook( module, hookName ) {
+	return function setHook( callback ) {
+		if ( config.currentModule !== module ) {
+			Logger.warn( "The `" + hookName + "` hook was called inside the wrong module (`" +
+				config.currentModule.name + "`). " +
+				"Instead, use hooks provided by the callback to the containing module (`" +
+				module.name + "`). " +
+				"This will become an error in QUnit 3.0." );
+		}
+		module.hooks[ hookName ].push( callback );
+	};
 }
 
 function processModule( name, options, executeNow, modifiers = {} ) {
@@ -63,9 +86,9 @@ function processModule( name, options, executeNow, modifiers = {} ) {
 
 	const module = createModule( name, options, modifiers );
 
-	// Move any hooks to a 'hooks' object
+	// Transfer any initial hooks from the options object to the 'hooks' object
 	const testEnvironment = module.testEnvironment;
-	const hooks = module.hooks = {};
+	const hooks = module.hooks;
 
 	setHookFromEnvironment( hooks, testEnvironment, "before" );
 	setHookFromEnvironment( hooks, testEnvironment, "beforeEach" );
@@ -73,10 +96,10 @@ function processModule( name, options, executeNow, modifiers = {} ) {
 	setHookFromEnvironment( hooks, testEnvironment, "after" );
 
 	const moduleFns = {
-		before: setHookFunction( module, "before" ),
-		beforeEach: setHookFunction( module, "beforeEach" ),
-		afterEach: setHookFunction( module, "afterEach" ),
-		after: setHookFunction( module, "after" )
+		before: makeSetHook( module, "before" ),
+		beforeEach: makeSetHook( module, "beforeEach" ),
+		afterEach: makeSetHook( module, "afterEach" ),
+		after: makeSetHook( module, "after" )
 	};
 
 	const prevModule = config.currentModule;
@@ -101,25 +124,6 @@ function processModule( name, options, executeNow, modifiers = {} ) {
 			moduleStack.pop();
 			config.currentModule = module.parentModule || prevModule;
 		}
-	}
-
-	function setHookFromEnvironment( hooks, environment, name ) {
-		const potentialHook = environment[ name ];
-		hooks[ name ] = typeof potentialHook === "function" ? [ potentialHook ] : [];
-		delete environment[ name ];
-	}
-
-	function setHookFunction( module, hookName ) {
-		return function setHook( callback ) {
-			if ( config.currentModule !== module ) {
-				Logger.warn( "The `" + hookName + "` hook was called inside the wrong module (`" +
-					config.currentModule.name + "`). " +
-					"Instead, use hooks provided by the callback to the containing module (`" +
-					module.name + "`). " +
-					"This will become an error in QUnit 3.0." );
-			}
-			module.hooks[ hookName ].push( callback );
-		};
 	}
 }
 
