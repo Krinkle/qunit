@@ -5,24 +5,40 @@ import config from "./core/config";
 import SuiteReport from "./reports/suite";
 
 import { extend, objectType, generateHash } from "./core/utilities";
-import { globalSuite } from "./core";
+
+export const globalSuite = new SuiteReport();
 
 const moduleStack = [];
+
+// Create the global module, the implicit parent for global tests and all modules.
+export const globalModule = createModule( "", {}, {}, true );
+
+// FIXME: Awkward placement
+moduleStack.push( globalModule );
 
 function isParentModuleInQueue() {
 	const modulesInQueue = config.modules
 		.filter( module => !module.ignored )
 		.map( module => module.moduleId );
+
+	// FIXME: Think about in terms of globalModule being in moduleStack
 	return moduleStack.some( module => modulesInQueue.includes( module.moduleId ) );
 }
 
-function createModule( name, testEnvironment, modifiers ) {
+export function createModule( name, testEnvironment, modifiers, isGlobalMmodule ) {
 	const parentModule = moduleStack.length ? moduleStack.slice( -1 )[ 0 ] : null;
-	const moduleName = parentModule !== null ? [ parentModule.name, name ].join( " > " ) : name;
-	const parentSuite = parentModule ? parentModule.suiteReport : globalSuite;
 
-	const skip = parentModule !== null && parentModule.skip || modifiers.skip;
-	const todo = parentModule !== null && parentModule.todo || modifiers.todo;
+	const moduleName = ( parentModule !== null && parentModule.name ) ?
+		[ parentModule.name, name ].join( " > " ) :
+		name;
+
+	// FIXME: Should be able to check for parentModule instead now. rm isGlobalMmodule
+	const suiteReport = isGlobalMmodule ?
+		globalSuite :
+		new SuiteReport( name, parentModule ? parentModule.suiteReport : globalSuite );
+
+	const skip = ( parentModule !== null && parentModule.skip ) || modifiers.skip;
+	const todo = ( parentModule !== null && parentModule.todo ) || modifiers.todo;
 
 	const env = {};
 	if ( parentModule ) {
@@ -33,14 +49,23 @@ function createModule( name, testEnvironment, modifiers ) {
 	const module = {
 		name: moduleName,
 		parentModule: parentModule,
-		hooks: {},
+		hooks: {
+			before: [],
+			beforeEach: [],
+			afterEach: [],
+			after: []
+		},
 		testEnvironment: env,
 		tests: [],
 		moduleId: generateHash( moduleName ),
 		testsRun: 0,
 		testsIgnored: 0,
 		childModules: [],
-		suiteReport: new SuiteReport( name, parentSuite ),
+		suiteReport: suiteReport,
+
+		// Initialised when a module starts, which happens in test.js during
+		// the first executed test that is in this module (or a child).
+		stats: null,
 
 		// Pass along `skip` and `todo` properties from parent module, in case
 		// there is one, to childs. And use own otherwise.
@@ -51,6 +76,7 @@ function createModule( name, testEnvironment, modifiers ) {
 		ignored: modifiers.ignored || false
 	};
 
+	// FIXME: What will this mean for globalModule?
 	if ( parentModule ) {
 		parentModule.childModules.push( module );
 	}
@@ -61,7 +87,9 @@ function createModule( name, testEnvironment, modifiers ) {
 
 function setHookFromEnvironment( hooks, environment, name ) {
 	const potentialHook = environment[ name ];
-	hooks[ name ] = typeof potentialHook === "function" ? [ potentialHook ] : [];
+	if ( typeof potentialHook === "function" ) {
+		hooks[ name ].push( potentialHook );
+	}
 	delete environment[ name ];
 }
 
@@ -122,6 +150,8 @@ function processModule( name, options, executeNow, modifiers = {} ) {
 			// we teardown internal state to ensure correct module nesting.
 			// Ref https://github.com/qunitjs/qunit/issues/1478.
 			moduleStack.pop();
+
+			// FIXME: This should no longer be needed, even for linear modules.
 			config.currentModule = module.parentModule || prevModule;
 		}
 	}
@@ -129,7 +159,7 @@ function processModule( name, options, executeNow, modifiers = {} ) {
 
 let focused = false; // indicates that the "only" filter was used
 
-export default function module( name, options, executeNow ) {
+export function module( name, options, executeNow ) {
 
 	const ignored = focused && !isParentModuleInQueue();
 

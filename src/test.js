@@ -1,4 +1,5 @@
 import globalThis from "../lib/global-this-polyfill";
+import { globalModule } from "./module";
 import { begin } from "./core";
 import { setTimeout, clearTimeout } from "./globals";
 import { emit } from "./events";
@@ -117,17 +118,21 @@ export default function Test( settings ) {
 
 Test.count = 0;
 
-function getNotStartedModules( startModule ) {
+function getModulesForStartEvent( startModule ) {
 	let module = startModule;
 	const modules = [];
 
-	while ( module && module.testsRun === 0 ) {
+	// For plugin compatibility and "do what I mean", we do not consider the
+	// implied global module as something we start and end from the event API.
+	// This would otherwise in needlessly clobbering user interfaces and other
+	// reports with a needless layer of indirection.
+	while ( module && module.testsRun === 0 && module !== globalModule ) {
 		modules.push( module );
 		module = module.parentModule;
 	}
 
-	// The above push modules from the child to the parent
-	// return a reversed order with the top being the top most parent module
+	// The above starts from the child and moves up to the parent.
+	// Return this in reversed order, such that we start with top-most parent.
 	return modules.reverse();
 }
 
@@ -140,7 +145,7 @@ Test.prototype = {
 
 	before: function() {
 		const module = this.module;
-		const notStartedModules = getNotStartedModules( module );
+		const notStartedModules = getModulesForStartEvent( module );
 
 		// ensure the callbacks are executed serially for each module
 		const callbackPromises = notStartedModules.reduce( ( promiseChain, startModule ) => {
@@ -239,7 +244,7 @@ Test.prototype = {
 				this.preserveEnvironment = true;
 			}
 
-			// The 'after' hook should only execute when there are not tests left and
+			// The 'after' hook should only execute when there are no tests left and
 			// when the 'after' and 'finish' tasks are the only tasks left to process
 			if ( hookName === "after" &&
 				!lastTestWithinModuleExecuted( hookOwner ) &&
@@ -381,23 +386,24 @@ Test.prototype = {
 			// generating stack trace is expensive, so using a getter will help defer this until we need it
 			get source() { return test.stack; }
 		} ).then( function() {
-			if ( allTestsExecuted( module ) ) {
-				const completedModules = [ module ];
+			const completedModules = [];
 
-				// Check if the parent modules, iteratively, are done. If that the case,
-				// we emit the `suiteEnd` event and trigger `moduleDone` callback.
-				let parent = module.parentModule;
-				while ( parent && allTestsExecuted( parent ) ) {
-					completedModules.push( parent );
-					parent = parent.parentModule;
-				}
-
-				return completedModules.reduce( ( promiseChain, completedModule ) => {
-					return promiseChain.then( () => {
-						return logSuiteEnd( completedModule );
-					} );
-				}, Promise.resolve( [] ) );
+			// Emit the `suiteEnd` event and `moduleDone` callbacks for modules
+			// that are completed as of now. But not the globalModule since we keep
+			// that hidden from the UI and event API (see also getModulesForStartEvent).
+			let parent = module;
+			while ( parent && parent !== globalModule && allTestsExecuted( parent ) ) {
+				completedModules.push( parent );
+				parent = parent.parentModule;
 			}
+
+			return completedModules.reduce( ( promiseChain, completedModule ) => {
+				return promiseChain.then( () => {
+					return logSuiteEnd( completedModule );
+				} );
+
+			// FIXME: Do we need this array parameter?
+			}, Promise.resolve( [] ) );
 		} ).then( function() {
 			config.current = undefined;
 		} );
@@ -411,8 +417,8 @@ Test.prototype = {
 			// memory (even if the hooks weren't actually executed), so we reset the
 			// hooks on all descendant modules here as well. This is safe because we
 			// will never call this as long as any descendant modules still have tests
-			// to run. This also means that in multi-tiered nesting scenarios we might
-			// reset the hooks multiple times on some modules, but that's harmless.
+			// to run. This also means that in for deeply nested modules we might reset
+			// the hooks multiple times, but that's harmless.
 			const modules = [ module ];
 			while ( modules.length ) {
 				const nextModule = modules.shift();

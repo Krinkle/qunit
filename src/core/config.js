@@ -46,20 +46,7 @@ const config = {
 	// Set of all modules.
 	modules: [],
 
-	// The first unnamed module
-	currentModule: {
-		name: "",
-		tests: [],
-		childModules: [],
-		testsRun: 0,
-		testsIgnored: 0,
-		hooks: {
-			before: [],
-			beforeEach: [],
-			afterEach: [],
-			after: []
-		}
-	},
+	currentModule: null,
 
 	callbacks: {},
 
@@ -74,8 +61,5 @@ const globalConfig = window && window.QUnit && window.QUnit.config;
 if ( window && window.QUnit && !window.QUnit.version ) {
 	extend( config, globalConfig );
 }
-
-// Push a loose unnamed module to the modules collection
-config.modules.push( config.currentModule );
 
 export default config;

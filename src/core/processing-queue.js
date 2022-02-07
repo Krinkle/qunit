@@ -14,7 +14,7 @@ import {
 } from "../test";
 import {
 	globalSuite
-} from "../core";
+} from "../module";
 import {
 	emit
 } from "../events";

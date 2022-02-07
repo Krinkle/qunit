@@ -2,7 +2,7 @@ import { window, document, setTimeout } from "./globals";
 
 import equiv from "./equiv";
 import dump from "./dump";
-import module from "./module";
+import { globalSuite, globalModule, module } from "./module";
 import Assert from "./assert";
 import Logger from "./logger";
 import Test, { test, pushFailure } from "./test";
@@ -15,19 +15,14 @@ import { registerLoggingCallbacks, runLoggingCallbacks } from "./core/logging";
 import { sourceFromStacktrace } from "./core/stacktrace";
 import ProcessingQueue from "./core/processing-queue";
 
-import SuiteReport from "./reports/suite";
-
 import { on, emit } from "./events";
 import onWindowError from "./core/onerror";
 import onUncaughtException from "./core/on-uncaught-exception";
 
 const QUnit = {};
-export const globalSuite = new SuiteReport();
 
-// The initial "currentModule" represents the global (or top-level) module that
-// is not explicitly defined by the user, therefore we add the "globalSuite" to
-// it since each module has a suiteReport associated with it.
-config.currentModule.suiteReport = globalSuite;
+config.modules.push( globalModule );
+config.currentModule = globalModule;
 
 let globalStartCalled = false;
 let runStarted = false;
@@ -171,12 +166,18 @@ export function begin() {
 	// Record the time of the test run's beginning
 	config.started = now();
 
-	// Delete the loose unnamed module if unused.
+	// @deprecated since 2.18: We plan to unconditionally expose the global module in QUnit 3
+	//
+	// The global module was introduced in QUnit 1.16. For compatibility and simpler
+	// user interface, we only expose the global module when it is used. If there are no global
+	// tests (most projects), then we don't execute the global module. We also don't mention it
+	// in `details.modules` as passed to the runStart event and QUnit.begin() callbacks.
 	if ( config.modules[ 0 ].name === "" && config.modules[ 0 ].tests.length === 0 ) {
 		config.modules.shift();
 	}
 
-	// Avoid unnecessary information by not logging modules' test environments
+	// Reduce "details" object passed to QUnit.begin() callbacks, to avoid exposure of,
+	// and reliance on, internal properties.
 	const l = config.modules.length;
 	const modulesLog = [];
 	for ( let i = 0; i < l; i++ ) {

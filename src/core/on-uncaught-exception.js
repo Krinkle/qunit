@@ -1,5 +1,5 @@
 import config from "./config";
-import { globalSuite } from "../core";
+import { globalSuite } from "../module";
 import { sourceFromStacktrace } from "./stacktrace";
 import { errorString } from "./utilities";
 import { emit } from "../events";
