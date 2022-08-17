@@ -3,12 +3,6 @@ import { StringSet } from './globals';
 
 const BOXABLE_TYPES = new StringSet(['boolean', 'number', 'string']);
 
-// Memory for previously seen containers (object, array, map, set).
-// Used for recursion detection, and to avoid repeated comparison.
-//
-// Elements are { a: val, b: val }.
-let memory = [];
-
 function useStrictEquality (a, b) {
   return a === b;
 }
@@ -69,14 +63,14 @@ const objTypeCallbacks = {
   // identical reference only
   function: useStrictEquality,
 
-  array (a, b) {
+  array (a, b, memory) {
     if (a.length !== b.length) {
       // Safe and faster
       return false;
     }
 
     for (let i = 0; i < a.length; i++) {
-      if (!typeEquiv(a[i], b[i])) {
+      if (!typeEquiv(a[i], b[i], memory)) {
         return false;
       }
     }
@@ -116,14 +110,11 @@ const objTypeCallbacks = {
           return;
         }
 
-        // Swap out the global memory, as nested typeEquiv() would clobber it
-        const originalMemory = memory;
-        memory = [];
+        // Don't pass memory, as this nested typeEquiv() must operate
+        // independently and would otherwise clobber it
         if (typeEquiv(bVal, aVal)) {
           innerEq = true;
         }
-        // Restore
-        memory = originalMemory;
       });
 
       if (!innerEq) {
@@ -168,14 +159,11 @@ const objTypeCallbacks = {
           return;
         }
 
-        // Swap out the global memory, as nested typeEquiv() would clobber it
-        const originalMemory = memory;
-        memory = [];
-        if (objTypeCallbacks.array([bVal, bKey], [aVal, aKey])) {
+        // Don't memory main memory, as nested typeEquiv() would clobber it
+        const localMemory = [];
+        if (objTypeCallbacks.array([bVal, bKey], [aVal, aKey], localMemory)) {
           innerEq = true;
         }
-        // Restore
-        memory = originalMemory;
       });
 
       if (!innerEq) {
@@ -200,7 +188,7 @@ const entryTypeCallbacks = {
   symbol: useStrictEquality,
 
   function: useStrictEquality,
-  object (a, b) {
+  object (a, b, memory) {
     // Handle memory (skip recursion)
     if (memory.some((pair) => pair.a === a && pair.b === b)) {
       return true;
@@ -212,7 +200,7 @@ const entryTypeCallbacks = {
     if (aObjType !== 'object' || bObjType !== 'object') {
       // Handle literal `null`
       // Handle: Array, Map/Set, Date, Regxp/Function, boxed primitives
-      return aObjType === bObjType && objTypeCallbacks[aObjType](a, b);
+      return aObjType === bObjType && objTypeCallbacks[aObjType](a, b, memory);
     }
 
     // NOTE: Literal null must not make it here as it would throw
@@ -238,7 +226,7 @@ const entryTypeCallbacks = {
       ) {
         continue;
       }
-      if (!typeEquiv(a[i], b[i])) {
+      if (!typeEquiv(a[i], b[i], memory)) {
         return false;
       }
     }
@@ -248,11 +236,15 @@ const entryTypeCallbacks = {
       bProperties.push(i);
     }
 
-    return objTypeCallbacks.array(aProperties.sort(), bProperties.sort());
+    return objTypeCallbacks.array(aProperties.sort(), bProperties.sort(), memory);
   }
 };
 
-function typeEquiv (a, b) {
+// Memory for previously seen containers (object, array, map, set).
+// Used for recursion detection, and to avoid repeated comparison.
+//
+// Elements are { a: val, b: val }.
+function typeEquiv (a, b, memory = []) {
   // Optimization: Only perform type-specific comparison when pairs are not strictly equal.
   if (a === b) {
     return true;
@@ -267,14 +259,7 @@ function typeEquiv (a, b) {
       (bType === 'object' && BOXABLE_TYPES.has(objectType(b)) ? b.valueOf() : b);
   }
 
-  return entryTypeCallbacks[aType](a, b);
-}
-
-function innerEquiv (a, b) {
-  const res = typeEquiv(a, b);
-  // Release any retained objects and reset recursion detection for next call
-  memory = [];
-  return res;
+  return entryTypeCallbacks[aType](a, b, memory);
 }
 
 /**
@@ -285,14 +270,14 @@ function innerEquiv (a, b) {
  */
 export default function equiv (a, b) {
   if (arguments.length === 2) {
-    return (a === b) || innerEquiv(a, b);
+    return (a === b) || typeEquiv(a, b);
   }
 
   // Given 0 or 1 arguments, just return true (nothing to compare).
   // Given (A,B,C,D) compare C,D then B,C then A,B.
   let i = arguments.length - 1;
   while (i > 0) {
-    if (!innerEquiv(arguments[i - 1], arguments[i])) {
+    if (!typeEquiv(arguments[i - 1], arguments[i])) {
       return false;
     }
     i--;
