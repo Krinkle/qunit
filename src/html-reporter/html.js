@@ -839,14 +839,6 @@ const stats = {
     }
   });
 
-  function stripHtml (string) {
-    // Strip tags, html entity and whitespaces
-    return string
-      .replace(/<\/?[^>]+(>|$)/g, '')
-      .replace(/&quot;/g, '')
-      .replace(/\s+/g, '');
-  }
-
   QUnit.log(function (details) {
     const testItem = id('qunit-test-output-' + details.testId);
     if (!testItem) {
@@ -891,10 +883,8 @@ const stats = {
               typeof details.expected !== 'boolean') {
           diff = QUnit.diff(expected, actual);
 
-          // don't show diff if there is zero overlap
-          showDiff = stripHtml(diff).length !==
-            stripHtml(expected).length +
-            stripHtml(actual).length;
+          // don't show diff if there is zero overlap (i.e. no context <span>'s)
+          showDiff = diff.indexOf('<span>') !== -1;
         }
 
         if (showDiff) {

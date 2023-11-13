@@ -8,7 +8,7 @@ function mockStack (error) {
   return error;
 }
 
-function makeFailingTestEnd (actualValue) {
+function makeFailingTestEnd (actualValue, expectedValue = 'expected') {
   return {
     name: 'Failing',
     suiteName: null,
@@ -18,7 +18,7 @@ function makeFailingTestEnd (actualValue) {
     errors: [{
       passed: false,
       actual: actualValue,
-      expected: 'expected'
+      expected: expectedValue
     }],
     assertions: null
   };
@@ -401,6 +401,37 @@ Bail out! ReferenceError: Boo is not defined
   "c": "unique"
 }
   expected: expected
+  ...`
+    );
+  });
+
+  QUnit.test('output diff for non-trivial differences', assert => {
+    emitter.emit('testEnd', makeFailingTestEnd(
+      { a: true, b: 'x' },
+      { c: false, b: 'x' }
+    ));
+    // eslint-disable-next-line no-control-regex
+    const lastDekleur = last.replace(/\x1b\[\d+m/g, '');
+    assert.strictEqual(lastDekleur, `  ---
+  message: failed
+  severity: failed
+  actual  : {
+  "a": true,
+  "b": "x"
+}
+  expected: {
+  "c": false,
+  "b": "x"
+}
+  diff: |
+    --- expected
+    +++ actual
+     {
+    -  "b": "x",
+    -  "c": false
+    +  "a": true,
+    +  "b": "x"
+     }
   ...`
     );
   });
