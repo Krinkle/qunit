@@ -159,7 +159,9 @@ function scheduleBegin () {
 
 function unblockAndAdvanceQueue () {
   config.blocking = false;
-  config.pq.advance();
+  // Advance after async yield to ensure that unhandled errors from
+  // "begin" are reported before the first test result.
+  Promise.resolve().then(config.pq.advance.bind(config.pq));
 }
 
 export function begin () {
@@ -198,7 +200,10 @@ export function begin () {
   runLoggingCallbacks('begin', {
     totalTests: Test.count,
     modules: modulesLog
-  }).then(unblockAndAdvanceQueue);
+
+    // Use "finally" (instead of then/catch) so that errors remain
+    // unhandled, this ensures they are reported as uncaught errors.
+  }).finally(unblockAndAdvanceQueue);
 }
 
 exportQUnit(QUnit);

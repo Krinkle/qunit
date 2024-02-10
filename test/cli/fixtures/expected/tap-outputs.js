@@ -307,7 +307,14 @@ Error: Process exited before tests finished running
 
   'qunit callbacks-rejected.js':
 `TAP version 13
-not ok 1 global failure
+ok 1 one
+ok 2 example > two
+1..2
+# pass 2
+# skip 0
+# todo 0
+# fail 0
+Bail out! Error: begin
   ---
   message: Error: begin
   severity: failed
@@ -317,10 +324,7 @@ not ok 1 global failure
         at qunit.js
         at internal
   ...
-Bail out! Error: begin
-
-# stderr
-Error: Process exited before tests finished running
+DEBUG: Caught errors from begin, moduleStart, moduleStart, done
 
 # exit code: 1`,
 
@@ -753,7 +757,13 @@ ok 1 adds global var
 
   'qunit bad-callbacks/begin-throw.js':
 `TAP version 13
-not ok 1 global failure
+ok 1 module1 > test1
+1..1
+# pass 1
+# skip 0
+# todo 0
+# fail 0
+Bail out! Error: No dice
   ---
   message: Error: No dice
   severity: failed
@@ -763,10 +773,6 @@ not ok 1 global failure
         at qunit.js
         at internal
   ...
-Bail out! Error: No dice
-
-# stderr
-Error: Process exited before tests finished running
 
 # exit code: 1`,
 

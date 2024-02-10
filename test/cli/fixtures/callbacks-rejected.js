@@ -18,7 +18,7 @@ QUnit.testStart(function () {
 
 QUnit.done(function () {
   setTimeout(function () {
-    console.log('Caught errors from ' + caught.join(', '));
+    console.log('DEBUG: Caught errors from ' + caught.join(', '));
   }, 100);
 });
 

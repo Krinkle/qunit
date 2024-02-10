@@ -904,7 +904,7 @@ function saveGlobal () {
 }
 
 function checkPollution () {
-  const old = config.pollution;
+  const old = config.pollution || [];
 
   saveGlobal();
 

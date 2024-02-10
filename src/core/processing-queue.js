@@ -102,7 +102,9 @@ class ProcessingQueue {
    */
   advanceTestQueue () {
     if (!config.blocking && !config.queue.length && config.depth === 0) {
-      this.done();
+      if (!this.finished) {
+        this.done();
+      }
       return;
     }
 
