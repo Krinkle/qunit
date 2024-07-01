@@ -160,6 +160,9 @@ export default class HtmlReporter {
     // loading qunit.js and the last QUnit.begin() listener finishing.
     this.config = options.config || QUnit.config;
     this.hiddenTests = [];
+    // Keep our hidepassed state for our toggle, which dynamically changes
+    // this without a reload.
+    this.hidepassed = undefined;
     this.collapseNext = false;
     this.unfilteredUrl = this.makeUrl({
       filter: undefined,
@@ -197,7 +200,6 @@ export default class HtmlReporter {
   // Updates the URL with the new state of `config.urlConfig` values.
   onToolbarChanged (ev) {
     const field = ev.currentTarget;
-    const params = {};
 
     // Detect if field is a select menu or a checkbox
     let value;
@@ -207,14 +209,13 @@ export default class HtmlReporter {
       value = field.checked ? (field.defaultValue || true) : undefined;
     }
 
-    params[field.name] = value;
-    let updatedUrl = this.makeUrl(params);
+    let updatedUrl = this.makeUrl({
+      [field.name]: value
+    });
 
     // Check if we can apply the change without a page refresh
     if (field.name === 'hidepassed' && 'replaceState' in window.history) {
-      urlParams[field.name] = value;
-      // TODO: Do we really have to write this change to QUnit.config?
-      this.config[field.name] = value || false;
+      this.hidepassed = value;
       let tests = DOM.id('qunit-tests');
       if (tests) {
         const length = tests.children.length;
@@ -251,7 +252,12 @@ export default class HtmlReporter {
     let querystring = '?';
     const location = window.location;
 
-    params = extend(extend({}, urlParams), params);
+    params = extend(
+      extend({}, urlParams),
+      // If unchanged/undefined, this will be skipped below
+      { hidepassed: this.hidepassed },
+      params
+    );
 
     for (let key in params) {
       // Skip inherited or undefined properties
@@ -1009,7 +1015,8 @@ export default class HtmlReporter {
       testItem.appendChild(sourceName);
     }
 
-    if (this.config.hidepassed && (status === 'passed' || details.skipped)) {
+    const hidepassed = (this.hidepassed !== undefined ? this.hidepassed : this.config.hidepassed);
+    if (hidepassed && (status === 'passed' || details.skipped)) {
       // use removeChild instead of remove because of support
       this.hiddenTests.push(testItem);
 
