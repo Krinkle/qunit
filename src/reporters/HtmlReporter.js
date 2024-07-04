@@ -115,15 +115,6 @@ function getUrlConfigHtml (config) {
   return urlConfigHtml;
 }
 
-function getProgressHtml (stats) {
-  return [
-    stats.completed,
-    ' / ',
-    stats.defined,
-    ' tests completed.<br />'
-  ].join('');
-}
-
 function stripHtml (string) {
   // Strip tags, html entity and whitespaces
   return string
@@ -196,6 +187,8 @@ export default class HtmlReporter {
     this.dropdownData = null;
 
     this.element = options.element || undefined;
+    this.elementBanner = null;
+    this.elementDisplay = null;
     // TODO: Consider rendering the UI early when possible for improved UX.
 
     // NOTE: Only listen for "error" and "runStart" now.
@@ -251,30 +244,28 @@ export default class HtmlReporter {
       // Set either true or undefined, which will now take precedence over
       // the original urlParams in makeUrl()
       this.hidepassed = value;
-      let tests = this.element.querySelector('#qunit-tests');
-      if (tests) {
-        const length = tests.children.length;
-        const children = tests.children;
+      const tests = this.elementTests;
+      const length = tests.children.length;
+      const children = tests.children;
 
-        if (field.checked) {
-          for (let i = 0; i < length; i++) {
-            const test = children[i];
-            const className = test ? test.className : '';
-            const classNameHasPass = className.indexOf('pass') > -1;
-            const classNameHasSkipped = className.indexOf('skipped') > -1;
+      if (field.checked) {
+        for (let i = 0; i < length; i++) {
+          const test = children[i];
+          const className = test ? test.className : '';
+          const classNameHasPass = className.indexOf('pass') > -1;
+          const classNameHasSkipped = className.indexOf('skipped') > -1;
 
-            if (classNameHasPass || classNameHasSkipped) {
-              this.hiddenTests.push(test);
-            }
+          if (classNameHasPass || classNameHasSkipped) {
+            this.hiddenTests.push(test);
           }
+        }
 
-          for (const hiddenTest of this.hiddenTests) {
-            tests.removeChild(hiddenTest);
-          }
-        } else {
-          while (this.hiddenTests.length) {
-            tests.appendChild(this.hiddenTests.shift());
-          }
+        for (const hiddenTest of this.hiddenTests) {
+          tests.removeChild(hiddenTest);
+        }
+      } else {
+        while (this.hiddenTests.length) {
+          tests.appendChild(this.hiddenTests.shift());
         }
       }
       window.history.replaceState(null, '', updatedUrl);
@@ -332,11 +323,8 @@ export default class HtmlReporter {
     button.id = 'qunit-abort-tests-button';
     button.innerHTML = 'Abort';
     DOM.on(button, 'click', () => {
-      const abortButton = this.element.querySelector('#qunit-abort-tests-button');
-      if (abortButton) {
-        abortButton.disabled = true;
-        abortButton.innerHTML = 'Aborting...';
-      }
+      button.disabled = true;
+      button.innerHTML = 'Aborting...';
       this.abort();
       return false;
     });
@@ -427,19 +415,25 @@ export default class HtmlReporter {
       return html;
     }
 
+    const label = document.createElement('label');
+    label.htmlFor = 'qunit-modulefilter-search';
+    label.textContent = 'Module:\u00A0 ';
+
+    const searchContainer = document.createElement('span');
+    searchContainer.className = 'qunit-modulefilter-search-container';
+    searchContainer.id = 'qunit-modulefilter-search-container';
+    label.appendChild(searchContainer);
+
     const moduleSearch = document.createElement('input');
+    // Set type=text explicitly for ease of styling
+    moduleSearch.setAttribute('type', 'text');
     moduleSearch.id = 'qunit-modulefilter-search';
+    moduleSearch.className = 'qunit-modulefilter-search';
     moduleSearch.autocomplete = 'off';
     DOM.on(moduleSearch, 'input', searchInput);
     DOM.on(moduleSearch, 'input', searchFocus);
     DOM.on(moduleSearch, 'focus', searchFocus);
     DOM.on(moduleSearch, 'click', searchFocus);
-
-    const label = document.createElement('label');
-    label.htmlFor = 'qunit-modulefilter-search';
-    label.textContent = 'Module:';
-    const searchContainer = document.createElement('span');
-    searchContainer.id = 'qunit-modulefilter-search-container';
     searchContainer.appendChild(moduleSearch);
 
     const applyButton = document.createElement('button');
@@ -463,7 +457,7 @@ export default class HtmlReporter {
     });
 
     const actions = document.createElement('span');
-    actions.id = 'qunit-modulefilter-actions';
+    actions.className = 'qunit-modulefilter-actions';
     actions.appendChild(applyButton);
     actions.appendChild(resetButton);
     if (initialSelected.size) {
@@ -472,10 +466,10 @@ export default class HtmlReporter {
     }
 
     const dropDownList = document.createElement('ul');
-    dropDownList.id = 'qunit-modulefilter-dropdown-list';
+    dropDownList.className = 'qunit-modulefilter-dropdown-list';
 
     const dropDown = document.createElement('div');
-    dropDown.id = 'qunit-modulefilter-dropdown';
+    dropDown.className = 'qunit-modulefilter-dropdown';
     dropDown.style.display = 'none';
     dropDown.appendChild(actions);
     dropDown.appendChild(dropDownList);
@@ -486,9 +480,8 @@ export default class HtmlReporter {
 
     const moduleFilter = document.createElement('form');
     moduleFilter.id = 'qunit-modulefilter';
+    moduleFilter.className = 'qunit-modulefilter';
     moduleFilter.appendChild(label);
-    moduleFilter.appendChild(document.createTextNode(' '));
-    moduleFilter.appendChild(searchContainer);
     DOM.on(moduleFilter, 'submit', this.onFilterSubmit.bind(this));
     DOM.on(moduleFilter, 'reset', function () {
       dropdownData.selectedMap = new StringMap(initialSelected);
@@ -539,13 +532,13 @@ export default class HtmlReporter {
         // module names, indicating how the interface works. This also makes
         // for a quicker interaction in the common case of small projects.
         // Don't mandate typing just to get the menu.
-        results = dropdownData.options.slice(0, 20).map(obj => {
+        results = dropdownData.options.slice(0, 100).map(obj => {
           // Fake empty results. https://github.com/farzher/fuzzysort/issues/41
           return { obj: obj };
         });
       } else {
         results = fuzzysort.go(searchText, dropdownData.options, {
-          limit: 20,
+          limit: 100,
           key: 'name',
           allowTypo: true
         });
@@ -597,26 +590,22 @@ export default class HtmlReporter {
     return moduleFilter;
   }
 
-  appendToolbar (beginDetails) {
-    const toolbar = this.element.querySelector('#qunit-testrunner-toolbar');
-    if (toolbar) {
+  appendToolbarControls (beginDetails) {
+    const toolbarControls = this.element.querySelector('.qunit-toolbar-controls');
+    if (toolbarControls) {
       const urlConfigContainer = document.createElement('span');
+      urlConfigContainer.className = 'qunit-toolbar-controls-urlconfig';
       urlConfigContainer.innerHTML = getUrlConfigHtml(this.config);
-      DOM.addClass(urlConfigContainer, 'qunit-url-config');
       DOM.onEach(urlConfigContainer.getElementsByTagName('input'), 'change', this.onToolbarChanged.bind(this));
       DOM.onEach(urlConfigContainer.getElementsByTagName('select'), 'change', this.onToolbarChanged.bind(this));
-      toolbar.appendChild(urlConfigContainer);
 
       const toolbarFilters = document.createElement('span');
-      toolbarFilters.id = 'qunit-toolbar-filters';
+      toolbarFilters.className = 'qunit-toolbar-controls-filters';
       toolbarFilters.appendChild(this.toolbarLooseFilter());
       toolbarFilters.appendChild(this.toolbarModuleFilter(beginDetails));
 
-      const clearfix = document.createElement('div');
-      clearfix.className = 'clearfix';
-
-      toolbar.appendChild(toolbarFilters);
-      toolbar.appendChild(clearfix);
+      toolbarControls.appendChild(urlConfigContainer);
+      toolbarControls.appendChild(toolbarFilters);
     }
   }
 
@@ -629,27 +618,8 @@ export default class HtmlReporter {
     }
   }
 
-  appendTestResults () {
-    const tests = this.element.querySelector('#qunit-tests');
-    let result = this.element.querySelector('#qunit-testresult');
-    let controls;
-
-    if (result) {
-      result.parentNode.removeChild(result);
-    }
-
-    if (tests) {
-      tests.innerHTML = '';
-      result = document.createElement('div');
-      result.id = 'qunit-testresult';
-      result.className = 'result';
-      tests.parentNode.insertBefore(result, tests);
-      result.innerHTML = '<div id="qunit-testresult-display">Running...<br />&#160;</div>' +
-      '<div id="qunit-testresult-controls"></div>' +
-      '<div class="clearfix"></div>';
-      controls = this.element.querySelector('#qunit-testresult-controls');
-    }
-
+  appendTestResultControls () {
+    const controls = this.element.querySelector('#qunit-testresult-controls');
     if (controls) {
       controls.appendChild(this.abortTestsButton());
     }
@@ -681,27 +651,34 @@ export default class HtmlReporter {
   }
 
   appendInterface (beginDetails) {
-    const qunit = this.element;
-
-    qunit.setAttribute('role', 'main');
-
     // Since QUnit 1.3, these are created automatically.
-    qunit.innerHTML =
-      "<h1 id='qunit-header'>" + escapeText(document.title) + '</h1>' +
-      "<div id='qunit-banner'></div>" +
-      "<div id='qunit-testrunner-toolbar' role='navigation'></div>" +
-      this.appendFilteredTest() +
-      "<h2 id='qunit-userAgent'></h2>" +
-      "<ol id='qunit-tests'></ol>";
+    this.element.setAttribute('role', 'main');
+    this.element.innerHTML =
+      '<h1 id="qunit-header">' + escapeText(document.title) + '</h1>' +
+      '<div id="qunit-userAgent"></div>' +
+      '<div id="qunit-toolbar" class="qunit-toolbar" role="navigation">' +
+        '<div id="qunit-banner"></div>' +
+        '<div class="qunit-toolbar-controls"></div>' +
+        '<div id="qunit-testresult" class="result">' +
+          '<div id="qunit-testresult-controls"></div>' +
+          '<div id="qunit-testresult-display">Running...<br />&#160;</div>' +
+        '</div>' +
+        this.appendFilteredTest() +
+      '</div>' +
+      '<ol id="qunit-tests"></ol>';
+
+    this.elementBanner = this.element.querySelector('#qunit-banner');
+    this.elementDisplay = this.element.querySelector('#qunit-testresult-display');
+    this.elementTests = this.element.querySelector('#qunit-tests');
 
     this.appendHeader();
-    this.appendTestResults();
     this.appendUserAgent();
-    this.appendToolbar(beginDetails);
+    this.appendToolbarControls(beginDetails);
+    this.appendTestResultControls();
   }
 
   appendTest (name, testId, moduleName) {
-    const tests = this.element.querySelector('#qunit-tests');
+    const tests = this.elementTests;
     if (!tests) {
       return;
     }
@@ -782,8 +759,6 @@ export default class HtmlReporter {
       return sec + (sec === 1 ? ' second' : ' seconds');
     }
 
-    const banner = this.element.querySelector('#qunit-banner');
-    const tests = this.element.querySelector('#qunit-tests');
     const abortButton = this.element.querySelector('#qunit-abort-tests-button');
     let html = [
       '<span class="total">', runEnd.testCounts.total, '</span> tests completed in ',
@@ -803,8 +778,8 @@ export default class HtmlReporter {
     if (abortButton && abortButton.disabled) {
       html = 'Tests aborted after ' + msToSec(runEnd.runtime) + '.';
 
-      for (let i = 0; i < tests.children.length; i++) {
-        test = tests.children[i];
+      for (let i = 0; i < this.elementTests.children.length; i++) {
+        test = this.elementTests.children[i];
         if (test.className === '' || test.className === 'running') {
           test.className = 'aborted';
           assertList = test.getElementsByTagName('ol')[0];
@@ -816,35 +791,35 @@ export default class HtmlReporter {
       }
     }
 
-    if (banner && (!abortButton || abortButton.disabled === false)) {
-      banner.className = runEnd.status === 'failed' ? 'qunit-fail' : 'qunit-pass';
+    if (!abortButton || abortButton.disabled === false) {
+      this.elementBanner.className = runEnd.status === 'failed' ? 'qunit-fail' : 'qunit-pass';
     }
 
     if (abortButton) {
       abortButton.parentNode.removeChild(abortButton);
     }
 
-    if (tests) {
-      this.element.querySelector('#qunit-testresult-display').innerHTML = html;
-    }
+    this.elementDisplay.innerHTML = html;
   }
 
   onTestStart (details) {
     this.appendTest(details.name, details.testId, details.module);
 
-    let running = this.element.querySelector('#qunit-testresult-display');
+    DOM.addClass(this.elementDisplay, 'running');
 
-    if (running) {
-      DOM.addClass(running, 'running');
+    this.elementDisplay.innerHTML = [
+      details.previousFailure
+        ? 'Rerunning previously failed test: <br />'
+        : `Running test ${this.stats.completed} of ${this.stats.defined}: <br />`,
+      getNameHtml(details.name, details.module),
+      this.getRerunFailedHtml(this.stats.failedTests)
+    ].join('');
 
-      running.innerHTML = [
-        getProgressHtml(this.stats),
-        details.previousFailure
-          ? 'Rerunning previously failed test: <br />'
-          : 'Running: ',
-        getNameHtml(details.name, details.module),
-        this.getRerunFailedHtml(this.stats.failedTests)
-      ].join('');
+    if (this.elementBanner.style.setProperty) {
+      this.elementBanner.style.setProperty(
+        '--qunit-progress',
+        Math.ceil(((this.stats.completed + 1) / this.stats.defined) * 100) + '%'
+      );
     }
   }
 
@@ -943,9 +918,8 @@ export default class HtmlReporter {
   }
 
   onTestDone (details) {
-    const tests = this.element.querySelector('#qunit-tests');
-    const testItem = this.element.querySelector('#qunit-test-output-' + details.testId);
-    if (!tests || !testItem) {
+    const testItem = this.elementTests.querySelector('#qunit-test-output-' + details.testId);
+    if (!testItem) {
       return;
     }
 
@@ -1001,6 +975,7 @@ export default class HtmlReporter {
       skipped.className = 'qunit-skipped-label';
       skipped.innerHTML = 'skipped';
       testItem.insertBefore(skipped, testTitle);
+      testItem.insertBefore(document.createTextNode(' '), testTitle);
     } else {
       DOM.on(testTitle, 'click', function () {
         DOM.toggleClass(assertList, 'qunit-collapsed');
@@ -1014,6 +989,7 @@ export default class HtmlReporter {
         todoLabel.innerHTML = 'todo';
         testItem.className += ' todo';
         testItem.insertBefore(todoLabel, testTitle);
+        testItem.insertBefore(document.createTextNode(' '), testTitle);
       }
 
       let time = document.createElement('span');
@@ -1041,7 +1017,7 @@ export default class HtmlReporter {
       // use removeChild instead of remove because of support
       this.hiddenTests.push(testItem);
 
-      tests.removeChild(testItem);
+      this.elementTests.removeChild(testItem);
     }
   }
 
