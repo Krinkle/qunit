@@ -15,7 +15,7 @@ QUnit.module('QUnit.module', function () {
     'parent with children': [
       // parent > child > one
       // parent > child > two
-      'parent-before: (empty)',
+      'parent-before: (emptyz)',
       'child-before: %beforeP=1',
       'parent-beforeEach: beforeC=1 beforeP=1',
       'child-beforeEach: beforeC=1 beforeP=1 beforeEach=P',

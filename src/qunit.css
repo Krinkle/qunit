@@ -46,14 +46,14 @@ body {
  */
 
 #qunit-header {
-	background-color: #0D3349;
-	color: #C2CCD1;
+	background-color: #1c1e24;
+	color: #dce0e6;
 
 	padding: 13px;
 
 	font-size: 24px;
 	line-height: 1;
-	font-weight: 400;
+	font-weight: normal;
 }
 
 #qunit-header a {
@@ -67,9 +67,8 @@ body {
 }
 
 #qunit-userAgent {
-	background-color: #EEE;
+	background-color: #f4f6f8;
 	padding: 7px 13px;
-	border-bottom: 1px solid #FFF;
 }
 
 #qunit-banner {
@@ -83,21 +82,21 @@ body {
 }
 #qunit-banner.qunit-pass {
 	background-image: none;
-	background-color: #C6E746;
+	background-color: #41c351;
 }
 #qunit-banner.qunit-fail {
 	background-image: none;
-	background-color: #EE5757;
+	background-color: #e84646;
 }
 
 .qunit-toolbar {
-	background-color: #EEE;
-	border-bottom: 1px solid #FFF;
+	background-color: #f4f6f8;
+	border-bottom: 1px solid #dce0e6;
 }
 
 #qunit-testresult {
 	clear: both;
-	border-top: 1px solid #FFF;
+	border-top: 1px solid #dce0e6;
 }
 
 .qunit-toolbar-controls-urlconfig,
@@ -108,7 +107,7 @@ body {
 }
 
 #qunit-filteredTest {
-	border-top: 1px solid #FFF;
+	border-top: 1px solid #dce0e6;
 	background-color: #fbdbfb;
 }
 
@@ -293,8 +292,8 @@ body {
 }
 
 #qunit-tests li {
-	padding: 0.4em 1em 0.4em 1em;
-	border-bottom: 1px solid #FFF;
+	padding: 7px 13px;
+	border-bottom: 1px solid #dce0e6;
 	list-style-position: inside;
 }
 
@@ -334,8 +333,7 @@ body {
 }
 
 .qunit-assert-list {
-	margin-top: 0.5em;
-	padding: 0.5em;
+	margin: 7px 0;
 
 	background-color: #FFF;
 }
@@ -398,7 +396,8 @@ body {
 
 #qunit-tests .pass {
 	color: #2F68DA;
-	background-color: #E2F0F7;
+	background-color: #d9f9e3;
+	border-bottom: 0;
 }
 
 #qunit-tests .pass .test-name {
@@ -412,14 +411,16 @@ body {
 }
 
 #qunit-tests .pass .test-actual,
-#qunit-tests .pass .test-expected           { color: #999; }
+#qunit-tests .pass .test-expected {
+	color: #999;
+}
 
 
 /** Test output: Failing */
 
 #qunit-tests .fail {
 	color: #000;
-	background-color: #EE5757;
+	background-color: #ffd8e1;
 }
 
 #qunit-tests li li.fail {
@@ -429,8 +430,12 @@ body {
 	white-space: pre;
 }
 
-#qunit-tests .fail .test-actual             { color: #EE5757; }
-#qunit-tests .fail .test-expected           { color: #008000; }
+#qunit-tests .fail .test-actual {
+	color: #EE5757;
+}
+#qunit-tests .fail .test-expected {
+	color: #008000;
+}
 
 
 /** Test output: Aborted */
@@ -455,7 +460,7 @@ body {
 }
 
 #qunit-tests .qunit-todo-label {
-	background-color: #EEE;
+	background-color: #f4f6f8;
 }
 
 /** Fixture */
