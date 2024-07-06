@@ -1,0 +1,9 @@
+timeout: 5s
+retries: 0
+
+providers:
+  - airtap-system
+
+browsers:
+  - name: ff
+  #- name: chrome

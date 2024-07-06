@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "scripts": {
+    "test": "airtap test.js"
+  },
+  "dependencies": {
+    "airtap": "^4.0.4",
+    "airtap-system": "^0.1.0"
+  }
+}
