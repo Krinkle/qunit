@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>QUnit Demo</title>
+  <link rel="stylesheet" href="../src/core/qunit.css">
+</head>
+<body>
+  <div id="qunit"></div>
+  <script src="../qunit/qunit.js"></script>
+  <script>
+    /* eslint-disable qunit/no-async-in-loops */
+    QUnit.config.reorder = false;
+    QUnit.config.urlConfig.push({
+      id: 'allpass',
+      label: 'All pass'
+    });
+    QUnit.test('hello pass', function (assert) {
+      var x = 1;
+      assert.equal(x, 1, 'x');
+    });
+    QUnit.module('example', function () {
+      QUnit.test('hello pass also', function (assert) {
+        var x = 2;
+        assert.equal(x, 2, 'x');
+        var y = 3;
+        assert.equal(y, 3, 'y');
+        setTimeout(assert.async(), 200);
+      });
+      (QUnit.urlParams.allpass ? QUnit.test.skip : QUnit.test)('hello fail', function (assert) {
+        var x = 42;
+        assert.equal(x, 42, 'x');
+        var y = { foo: '50', quux: '62' };
+        assert.propEqual(y, { foo: '50', quux: '70' }, 'y');
+      });
+    });
+    QUnit.module('another example', function () {
+      QUnit.test('another pass', function (assert) {
+        assert.true(true, 'x');
+      });
+      QUnit.test('slow pass', function (assert) {
+        assert.true(true, 'x');
+        setTimeout(assert.async(), 300);
+      });
+      QUnit.test.skip('kangaroo', function (assert) {
+        assert.true(false);
+      });
+      QUnit.test('another slow pass', function (assert) {
+        assert.true(true, 'x');
+        setTimeout(assert.async(), 300);
+      });
+    });
+    QUnit.module('another repeat', function () {
+      for (var i = 0; i < 20; i++) {
+        QUnit.module('nested ' + i, function () {
+          for (var j = 0; j < 10; j++) {
+            QUnit.test('example ' + j.toString(16).toUpperCase(), function (assert) {
+              assert.true(true);
+              setTimeout(assert.async());
+            });
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

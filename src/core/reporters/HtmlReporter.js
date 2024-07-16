@@ -455,6 +455,11 @@ export default class HtmlReporter {
       searchInput();
     });
 
+    const skipLink = document.createElement('a');
+    skipLink.className = 'qunit-visuallyhidden';
+    skipLink.href = '#qunit-testresult-display';
+    skipLink.textContent = 'Skip to test result';
+
     const actions = document.createElement('span');
     actions.id = 'qunit-modulefilter-actions';
     actions.appendChild(applyButton);
@@ -463,6 +468,7 @@ export default class HtmlReporter {
       // Only show clear button if functionally different from reset
       actions.appendChild(clearButton);
     }
+    actions.appendChild(skipLink);
 
     const dropDownList = document.createElement('ul');
     dropDownList.id = 'qunit-modulefilter-dropdown-list';
@@ -594,6 +600,12 @@ export default class HtmlReporter {
   appendToolbarControls (beginDetails) {
     const toolbarControls = this.element.querySelector('#qunit-testrunner-toolbar');
     if (toolbarControls) {
+      const skipLink = document.createElement('a');
+      skipLink.className = 'qunit-visuallyhidden';
+      skipLink.href = '#qunit-testresult-display';
+      skipLink.textContent = 'Skip to test result';
+      toolbarControls.appendChild(skipLink);
+
       const urlConfigContainer = document.createElement('span');
       urlConfigContainer.id = 'qunit-toolbar-urlconfig';
       urlConfigContainer.className = 'qunit-url-config';
@@ -658,8 +670,9 @@ export default class HtmlReporter {
   }
 
   appendTest (name, testId, moduleName) {
-    let title = document.createElement('strong');
+    let title = document.createElement('span');
     title.className = 'qunit-test-name';
+    title.tabIndex = '0';
     title.innerHTML = getNameHtml(name, moduleName);
 
     let testBlock = document.createElement('li');
@@ -673,6 +686,7 @@ export default class HtmlReporter {
       rerunTrigger.href = this.makeUrl({ testId: testId });
 
       testBlock.id = 'qunit-test-output-' + testId;
+      testBlock.appendChild(document.createTextNode(' '));
       testBlock.appendChild(rerunTrigger);
     }
 
@@ -803,7 +817,7 @@ export default class HtmlReporter {
 
     let message = escapeText(details.message) || (details.result ? 'okay' : 'failed');
     message = '<span class="test-message">' + message + '</span>';
-    message += '<span class="runtime">@ ' + details.runtime + ' ms</span>';
+    message += ' <span class="runtime">@ ' + details.runtime + ' ms</span>';
 
     let expected;
     let actual;
@@ -915,24 +929,12 @@ export default class HtmlReporter {
     let testTitle = testItem.firstChild;
 
     let assertList = testItem.getElementsByTagName('ol')[0];
-    // Collapse passing tests by default
-    if (testPassed) {
-      DOM.addClass(assertList, 'qunit-collapsed');
-    } else {
-      if (this.config.collapse) {
-        if (!this.collapseNext) {
-          // Skip collapsing the first failing test
-          this.collapseNext = true;
-        } else {
-          // Collapse subsequent failing tests
-          DOM.addClass(assertList, 'qunit-collapsed');
-        }
-      }
-    }
-    if (status !== 'skipped') {
-      DOM.on(testTitle, 'click', function () {
-        DOM.toggleClass(assertList, 'qunit-collapsed');
-      });
+    // Assertions are collapsed by default
+    if (!testPassed && this.config.collapse && !this.collapseNext) {
+      // Expand the first failing test
+      // Collapse subsequent failing tests
+      this.collapseNext = true;
+      DOM.addClass(testItem, 'qunit-test--expanded');
     }
 
     let good = details.passed;
@@ -971,6 +973,7 @@ export default class HtmlReporter {
       time.className = 'runtime';
       time.textContent = details.runtime + ' ms';
       testItem.insertBefore(time, assertList);
+      testItem.insertBefore(document.createTextNode(' '), time);
     }
 
     // Show the source of the test when showing assertions
@@ -978,14 +981,19 @@ export default class HtmlReporter {
       let sourceName = document.createElement('p');
       sourceName.innerHTML = '<strong>Source: </strong>' + escapeText(details.source);
       DOM.addClass(sourceName, 'qunit-source');
-      if (testPassed) {
-        DOM.addClass(sourceName, 'qunit-collapsed');
-      }
-      DOM.on(testTitle, 'click', function () {
-        DOM.toggleClass(sourceName, 'qunit-collapsed');
-      });
       testItem.appendChild(sourceName);
     }
+
+    // Expand .qunit-assert-list and/or .qunit-source
+    DOM.on(testTitle, 'click', function () {
+      DOM.toggleClass(testItem, 'qunit-test--expanded');
+    });
+    DOM.on(testTitle, 'keydown', function (e) {
+      if (e.code === 'Space' && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        DOM.toggleClass(testItem, 'qunit-test--expanded');
+        e.preventDefault();
+      }
+    });
 
     const hidepassed = (this.hidepassed !== null ? this.hidepassed : this.config.hidepassed);
     if (hidepassed && (status === 'passed' || details.skipped)) {
