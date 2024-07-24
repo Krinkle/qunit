@@ -28,46 +28,55 @@ config.currentModule.suiteReport = runSuite;
 
 config._pq = new ProcessingQueue(test);
 
-const QUnit = {
+// Figure out if we're running the tests from a server or not
+const isLocal = (window && window.location && window.location.protocol === 'file:');
 
-  // Figure out if we're running the tests from a server or not
-  isLocal: (window && window.location && window.location.protocol === 'file:'),
+const begin = createRegisterCallbackFunction('begin');
+const done = createRegisterCallbackFunction('done');
+const log = createRegisterCallbackFunction('log');
+const moduleDone = createRegisterCallbackFunction('moduleDone');
+const moduleStart = createRegisterCallbackFunction('moduleStart');
+const testDone = createRegisterCallbackFunction('testDone');
+const testStart = createRegisterCallbackFunction('testStart');
 
-  // Expose the current QUnit version
-  version,
+const assert = Assert.prototype;
 
-  config,
-  stack,
-  urlParams,
+const only = test.only;
+const skip = test.skip;
+const todo = test.todo;
 
-  diff,
-  dump,
-  equiv,
-  reporters,
+export {
   hooks,
-  is,
-  on,
-  objectType,
-  onUncaughtException,
-  pushFailure,
-
-  begin: createRegisterCallbackFunction('begin'),
-  done: createRegisterCallbackFunction('done'),
-  log: createRegisterCallbackFunction('log'),
-  moduleDone: createRegisterCallbackFunction('moduleDone'),
-  moduleStart: createRegisterCallbackFunction('moduleStart'),
-  testDone: createRegisterCallbackFunction('testDone'),
-  testStart: createRegisterCallbackFunction('testStart'),
-
-  assert: Assert.prototype,
   module,
   start,
   test,
 
-  // alias other test flavors for easy access
-  todo: test.todo,
-  skip: test.skip,
-  only: test.only
-};
+  only,
+  skip,
+  todo,
 
-export default QUnit;
+  begin,
+  done,
+  log,
+  moduleDone,
+  moduleStart,
+  on,
+  testDone,
+  testStart,
+
+  config,
+
+  assert,
+  diff,
+  dump,
+  equiv,
+  is,
+  isLocal,
+  objectType,
+  onUncaughtException,
+  pushFailure,
+  reporters,
+  stack,
+  urlParams,
+  version
+};
