@@ -3,8 +3,6 @@ import { errorString } from '../utilities.js';
 import { console } from '../globals.js';
 import { annotateStacktrace } from '../stacktrace.js';
 
-const hasOwn = Object.prototype.hasOwnProperty;
-
 /**
  * Format a given value into YAML.
  *
@@ -259,18 +257,22 @@ export default class TapReporter {
     out += `\n  message: ${prettyYamlValue(error.message || 'failed')}`;
     out += `\n  severity: ${prettyYamlValue(severity || 'failed')}`;
 
-    if (hasOwn.call(error, 'actual')) {
+    // When pushFailure() is used, actual/expected are initially unset but
+    // eventually in Test#logAssertion, for testReport#pushAssertion, these are
+    // forged into existence as undefined.
+    const hasAny = (error.actual !== undefined || error.expected !== undefined);
+    if (hasAny) {
       out += `\n  actual  : ${prettyYamlValue(error.actual)}`;
-    }
-
-    if (hasOwn.call(error, 'expected')) {
       out += `\n  expected: ${prettyYamlValue(error.expected)}`;
     }
 
     if (error.stack) {
       // Since stacks aren't user generated, take a bit of liberty by
       // adding a trailing new line to allow a straight-forward YAML Blocks.
-      out += `\n  stack: ${prettyYamlValue(error.stack + '\n')}`;
+      const fmtStack = annotateStacktrace(error.stack, kleur.grey);
+      if (fmtStack.length) {
+        out += `\n  stack: ${prettyYamlValue(fmtStack + '\n')}`;
+      }
     }
 
     out += '\n  ...';
@@ -282,7 +284,10 @@ export default class TapReporter {
     out += `\n  message: ${prettyYamlValue(errorString(error))}`;
     out += `\n  severity: ${prettyYamlValue('failed')}`;
     if (error && error.stack) {
-      out += `\n  stack: ${prettyYamlValue(annotateStacktrace(error, kleur.grey) + '\n')}`;
+      const fmtStack = annotateStacktrace(error.stack, kleur.grey, error.toString());
+      if (fmtStack.length) {
+        out += `\n  stack: ${prettyYamlValue(fmtStack + '\n')}`;
+      }
     }
     out += '\n  ...';
     this.log(out);

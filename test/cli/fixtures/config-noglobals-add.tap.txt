@@ -8,8 +8,6 @@ not ok 1 adds global var
   severity: failed
   actual  : null
   expected: undefined
-  stack: |
-        at qunit.js
   ...
 1..1
 # pass 0

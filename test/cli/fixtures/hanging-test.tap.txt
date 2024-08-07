@@ -1,5 +1,5 @@
 # name: test that hangs
-# command: ["qunit","hanging-test.js"]
+# command: ["qunit", "hanging-test.js"]
 
 TAP version 13
 not ok 1 hanging
@@ -8,8 +8,6 @@ not ok 1 hanging
   severity: failed
   actual  : null
   expected: undefined
-  stack: |
-        at internal
   ...
 1..1
 # pass 0

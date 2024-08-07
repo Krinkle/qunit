@@ -842,7 +842,7 @@ export default class HtmlReporter {
     let actual;
 
     // When pushFailure() is called, it is implied that no expected value
-    // or diff should be shown. It does not set details.expected.
+    // or diff should be shown, because both expected and actual as undefined.
     //
     // This must check details.expected existence. If it exists as undefined,
     // that's a regular assertion for which to render actual/expected and a diff.

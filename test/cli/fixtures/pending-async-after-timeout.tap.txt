@@ -1,5 +1,5 @@
 # name: test with pending async after timeout
-# command: ["qunit","pending-async-after-timeout.js"]
+# command: ["qunit", "pending-async-after-timeout.js"]
 
 TAP version 13
 not ok 1 example
@@ -8,8 +8,6 @@ not ok 1 example
   severity: failed
   actual  : null
   expected: undefined
-  stack: |
-        at internal
   ...
 1..1
 # pass 0

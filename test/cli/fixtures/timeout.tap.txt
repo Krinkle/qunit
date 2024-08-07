@@ -8,8 +8,6 @@ not ok 1 timeout > first
   severity: failed
   actual  : null
   expected: undefined
-  stack: |
-        at internal
   ...
 ok 2 timeout > second
 1..2

@@ -8,8 +8,6 @@ not ok 1 times out before scheduled done is called
   severity: failed
   actual  : null
   expected: undefined
-  stack: |
-        at internal
   ...
 1..1
 # pass 0

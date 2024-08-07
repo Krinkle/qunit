@@ -8,8 +8,6 @@ not ok 1 slow
   severity: failed
   actual  : null
   expected: undefined
-  stack: |
-        at internal
   ...
 1..1
 # pass 0
